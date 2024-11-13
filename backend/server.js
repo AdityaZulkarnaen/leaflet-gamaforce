@@ -100,6 +100,59 @@ app.get('/api/missions', async (req, res) => {
   }
 });
 
+app.put('/api/missions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nama } = req.body;
+
+    const result = await new Promise((resolve, reject) => {
+      db.run(
+        'UPDATE missions SET nama = ? WHERE mission_id = ?',
+        [nama, id],
+        function (err) {
+          if (err) reject(err);
+          resolve(this);
+        }
+      );
+    });
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Mission not found' });
+    }
+
+    res.json({ message: 'Mission updated successfully' });
+  } catch (error) {
+    console.error('Error updating mission:', error);
+    res.status(500).json({ error: 'Failed to update mission' });
+  }
+});
+
+app.delete('/api/missions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await new Promise((resolve, reject) => {
+      db.run(
+        'DELETE FROM missions WHERE mission_id = ?',
+        [id],
+        function (err) {
+          if (err) reject(err);
+          resolve(this);
+        }
+      );
+    });
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Mission not found' });
+    }
+
+    res.json({ message: 'Mission deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting mission:', error);
+    res.status(500).json({ error: 'Failed to delete mission' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

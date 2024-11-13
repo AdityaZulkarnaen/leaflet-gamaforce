@@ -10,6 +10,7 @@ import { EditControl } from "react-leaflet-draw"
 import "leaflet-draw/dist/leaflet.draw.css"
 import L from 'leaflet'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
+import Swal from 'sweetalert2'
 
 let DefaultIcon = L.icon({
   iconUrl: manuk,
@@ -24,25 +25,20 @@ const MapComponents = () => {
   const position = [-7.764785277662592, 110.38173999968215]
   const [missions, setMissions] = useState([])
   const [drawnItems, setDrawnItems] = useState([])
+  const [editingMission, setEditingMission] = useState(null)
 
-  // Fetch saved missions when component mounts
   useEffect(() => {
-    const fetchMissions = async () => {
-      try {
-        const response = await axios.get('http://localhost:3000/api/missions');
-        setMissions(response.data);
-        console.log('Fetched missions:', response.data);
-      } catch (error) {
-        console.error('Error fetching missions:', error);
-      }
-    };
-
     fetchMissions();
   }, []);
 
-  useEffect(() => {
-    console.log('Drawn Items:', drawnItems);
-  }, [drawnItems]);
+  const fetchMissions = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/api/missions');
+      setMissions(response.data);
+    } catch (error) {
+      console.error('Error fetching missions:', error);
+    }
+  };
 
   const handleCreated = async (e) => {
     const { layerType, layer } = e;
@@ -52,26 +48,46 @@ const MapComponents = () => {
         lng: latLng.lng
       }));
 
-      const newItem = {
-        type: 'polyline',
-        coordinates: coordinates,
-        id: Date.now()
-      };
+      const { value: missionName } = await Swal.fire({
+        title: 'Enter Mission Name',
+        input: 'text',
+        inputLabel: 'Mission Name',
+        inputPlaceholder: 'Enter your mission name',
+        showCancelButton: true,
+        inputValidator: (value) => {
+          if (!value) {
+            return 'You need to enter a mission name!'
+          }
+        }
+      });
 
-      try {
-        const missionData = {
-          nama: `Mission-${newItem.id}`,
-          coord: coordinates
-        };
+      if (missionName) {
+        try {
+          const missionData = {
+            nama: missionName,
+            coord: coordinates
+          };
 
-        const response = await axios.post('http://localhost:3000/api/missions', missionData);
-        console.log('Mission saved:', response.data);
+          const response = await axios.post('http://localhost:3000/api/missions', missionData);
+          
+          Swal.fire({
+            icon: 'success',
+            title: 'Mission Saved!',
+            text: `Mission "${missionName}" has been saved successfully`,
+            showConfirmButton: false,
+            timer: 2000
+          });
 
-        // Update both drawnItems and missions
-        setDrawnItems(prev => [...prev, newItem]);
-        setMissions(prev => [...prev, response.data]);
-      } catch (error) {
-        console.error('Error saving mission:', error);
+          setMissions(prev => [...prev, response.data]);
+          setDrawnItems(prev => [...prev, { type: 'polyline', coordinates, id: response.data.mission_id }]);
+        } catch (error) {
+          console.error('Error saving mission:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to save mission'
+          });
+        }
       }
     }
   };
@@ -88,7 +104,80 @@ const MapComponents = () => {
     });
   };
 
-  // Function to convert stored coordinates to Leaflet format
+  const handleDeleteMission = async (missionId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.delete(`http://localhost:3000/api/missions/${missionId}`);
+        setMissions(prev => prev.filter(mission => mission.mission_id !== missionId));
+        
+        Swal.fire(
+          'Deleted!',
+          'Your mission has been deleted.',
+          'success'
+        );
+      }
+    } catch (error) {
+      console.error('Error deleting mission:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to delete mission'
+      });
+    }
+  };
+
+  const handleEditMission = async (mission) => {
+    const { value: newName } = await Swal.fire({
+      title: 'Edit Mission Name',
+      input: 'text',
+      inputLabel: 'New Mission Name',
+      inputValue: mission.nama,
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'You need to enter a mission name!';
+        }
+      }
+    });
+
+    if (newName) {
+      try {
+        const response = await axios.put(`http://localhost:3000/api/missions/${mission.mission_id}`, {
+          nama: newName
+        });
+
+        setMissions(prev => prev.map(m => 
+          m.mission_id === mission.mission_id ? { ...m, nama: newName } : m
+        ));
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Updated!',
+          text: 'Mission name has been updated.',
+          showConfirmButton: false,
+          timer: 1500
+        });
+      } catch (error) {
+        console.error('Error updating mission:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to update mission'
+        });
+      }
+    }
+  };
+
   const convertCoordinates = (coord) => {
     return coord.map(point => [point.lat, point.lng]);
   };
@@ -116,11 +205,9 @@ const MapComponents = () => {
             circlemarker: false
           }}
         />
-        <Circle center={[51.51, -0.06]} radius={200} />
       </FeatureGroup>
 
-      {/* Render saved missions */}
-      {missions.map((mission, index) => (
+      {missions.map((mission) => (
         <React.Fragment key={mission.mission_id}>
           <Polyline
             positions={convertCoordinates(mission.coord)}
@@ -128,43 +215,64 @@ const MapComponents = () => {
             weight={3}
           >
             <Popup>
-              <div>
+              <div className="mission-popup">
                 <h3>{mission.nama}</h3>
                 <p>Mission ID: {mission.mission_id}</p>
                 <p>Created: {new Date(mission.created_at).toLocaleString()}</p>
+                <div className="popup-buttons">
+                  <button 
+                    onClick={() => handleEditMission(mission)}
+                    style={{
+                      backgroundColor: '#4CAF50',
+                      color: 'white',
+                      padding: '8px 16px',
+                      border: 'none',
+                      borderRadius: '4px',
+                      marginRight: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteMission(mission.mission_id)}
+                    style={{
+                      backgroundColor: '#f44336',
+                      color: 'white',
+                      padding: '8px 16px',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </Popup>
           </Polyline>
           
-          {/* Add markers for start and end points */}
-          {mission.coord.length > 0 && (
-            <>
-              <Marker 
-                position={[mission.coord[0].lat, mission.coord[0].lng]}
-                icon={L.divIcon({
-                  html: '🟢',
-                  className: 'custom-icon',
-                  iconSize: [20, 20]
-                })}
-              >
-                <Popup>Start Point - {mission.nama}</Popup>
-              </Marker>
-              
-              <Marker 
-                position={[
-                  mission.coord[mission.coord.length - 1].lat, 
-                  mission.coord[mission.coord.length - 1].lng
-                ]}
-                icon={L.divIcon({
-                  html: '🔴',
-                  className: 'custom-icon',
-                  iconSize: [20, 20]
-                })}
-              >
-                <Popup>End Point - {mission.nama}</Popup>
-              </Marker>
-            </>
-          )}
+          <Marker 
+            position={[mission.coord[0].lat, mission.coord[0].lng]}
+            icon={L.divIcon({
+              html: '🟢',
+              className: 'custom-icon',
+              iconSize: [20, 20]
+            })}
+          >
+            <Popup>Start Point - {mission.nama}</Popup>
+          </Marker>
+          
+          <Marker 
+            position={[mission.coord[mission.coord.length - 1].lat, mission.coord[mission.coord.length - 1].lng]}
+            icon={L.divIcon({
+              html: '🔴',
+              className: 'custom-icon',
+              iconSize: [20, 20]
+            })}
+          >
+            <Popup>End Point - {mission.nama}</Popup>
+          </Marker>
         </React.Fragment>
       ))}
 
