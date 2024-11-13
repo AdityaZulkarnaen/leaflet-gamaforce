@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { MapContainer } from 'react-leaflet'
-import { TileLayer } from 'react-leaflet'
-import { Marker } from 'react-leaflet'
-import { Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import { useMapEvents } from 'react-leaflet'
 import axios from 'axios'
 import 'leaflet/dist/leaflet.css'
@@ -25,8 +22,23 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 const MapComponents = () => {
   const position = [-7.764785277662592, 110.38173999968215]
-  const [missions, setMission] = useState([])
+  const [missions, setMissions] = useState([])
   const [drawnItems, setDrawnItems] = useState([])
+
+  // Fetch saved missions when component mounts
+  useEffect(() => {
+    const fetchMissions = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/api/missions');
+        setMissions(response.data);
+        console.log('Fetched missions:', response.data);
+      } catch (error) {
+        console.error('Error fetching missions:', error);
+      }
+    };
+
+    fetchMissions();
+  }, []);
 
   useEffect(() => {
     console.log('Drawn Items:', drawnItems);
@@ -47,18 +59,17 @@ const MapComponents = () => {
       };
 
       try {
-        // Menyiapkan data sesuai format yang dibutuhkan backend
         const missionData = {
           nama: `Mission-${newItem.id}`,
           coord: coordinates
         };
 
-        // Mengirim data ke backend
         const response = await axios.post('http://localhost:3000/api/missions', missionData);
         console.log('Mission saved:', response.data);
 
-        // Update state lokal
+        // Update both drawnItems and missions
         setDrawnItems(prev => [...prev, newItem]);
+        setMissions(prev => [...prev, response.data]);
       } catch (error) {
         console.error('Error saving mission:', error);
       }
@@ -75,6 +86,11 @@ const MapComponents = () => {
         ))
       );
     });
+  };
+
+  // Function to convert stored coordinates to Leaflet format
+  const convertCoordinates = (coord) => {
+    return coord.map(point => [point.lat, point.lng]);
   };
 
   return (
@@ -102,6 +118,55 @@ const MapComponents = () => {
         />
         <Circle center={[51.51, -0.06]} radius={200} />
       </FeatureGroup>
+
+      {/* Render saved missions */}
+      {missions.map((mission, index) => (
+        <React.Fragment key={mission.mission_id}>
+          <Polyline
+            positions={convertCoordinates(mission.coord)}
+            color="red"
+            weight={3}
+          >
+            <Popup>
+              <div>
+                <h3>{mission.nama}</h3>
+                <p>Mission ID: {mission.mission_id}</p>
+                <p>Created: {new Date(mission.created_at).toLocaleString()}</p>
+              </div>
+            </Popup>
+          </Polyline>
+          
+          {/* Add markers for start and end points */}
+          {mission.coord.length > 0 && (
+            <>
+              <Marker 
+                position={[mission.coord[0].lat, mission.coord[0].lng]}
+                icon={L.divIcon({
+                  html: '🟢',
+                  className: 'custom-icon',
+                  iconSize: [20, 20]
+                })}
+              >
+                <Popup>Start Point - {mission.nama}</Popup>
+              </Marker>
+              
+              <Marker 
+                position={[
+                  mission.coord[mission.coord.length - 1].lat, 
+                  mission.coord[mission.coord.length - 1].lng
+                ]}
+                icon={L.divIcon({
+                  html: '🔴',
+                  className: 'custom-icon',
+                  iconSize: [20, 20]
+                })}
+              >
+                <Popup>End Point - {mission.nama}</Popup>
+              </Marker>
+            </>
+          )}
+        </React.Fragment>
+      ))}
 
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
