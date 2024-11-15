@@ -2,16 +2,19 @@ import { useState } from 'react'
 import './App.css'
 import Navbar from './components/NavBar'
 import MapComponents from './components/MapComponents'
-import DropList from './components/DropList'
 
 function App() {
+  const [selectedMissionId, setSelectedMissionId] = useState(null);
+
+  const handleMissionLoad = (missionId) => {
+    setSelectedMissionId(missionId);
+  };
 
   return (
     <>
-    <Navbar />
-    <MapComponents />
+      <Navbar onMissionLoad={handleMissionLoad} />
+      <MapComponents selectedMissionId={selectedMissionId} />
     </>
-
   );
 }
 

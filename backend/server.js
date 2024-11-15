@@ -100,6 +100,23 @@ app.get('/api/missions', async (req, res) => {
   }
 });
 
+app.get('/api/missions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const query = 'SELECT * FROM missions WHERE mission_id = $1';
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Mission not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching mission:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 app.put('/api/missions/:id', async (req, res) => {
   try {
     const { id } = req.params;

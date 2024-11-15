@@ -1,0 +1,68 @@
+
+
+.listcontainer {
+    overflow-x: hidden;
+}
+
+table {
+    width: 80%;
+    border-collapse: separate; 
+    border-spacing: 20px 0px; 
+    margin-top: 20px;
+    border-radius: 30px;  
+}
+
+
+
+th, td {
+    padding: 10px;
+    text-align: left;
+    font-family: "Roboto";
+}
+
+th {
+    background-color: #9eb927;
+}
+
+th, td {
+    border-radius: 30px; 
+
+}
+
+td {
+    color: rgb(255, 255, 255);
+    font-weight: 300;
+}
+
+button {
+    margin-left: 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 10px;
+    border: none;
+}
+
+button:hover {
+    background-color: #f0f0f081;
+}
+
+input[type="text"] {
+    padding: 5px;
+    width: 100%;
+}
+
+
+.close-btn {
+    width: 40%;
+    padding: 10px 20px;
+    background-color: #9eb927;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    background-color: #9eb927ab;  
+}
+  
