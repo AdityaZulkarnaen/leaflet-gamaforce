@@ -66,3 +66,15 @@ input[type="text"] {
     background-color: #9eb927ab;  
 }
   
+
+.swal2-popup {
+    width: auto !important;
+    min-width: 32em !important;
+    max-width: 100% !important;
+  }
+  
+  .swal2-input {
+    max-width: 100% !important;
+    width: 90% !important;
+    margin: 1em auto !important;
+  }

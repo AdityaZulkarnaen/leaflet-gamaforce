@@ -23,12 +23,9 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 const MapComponents = ({ selectedMissionId }) => {
   const position = [-7.764785277662592, 110.38173999968215]
-  const [missions, setMissions] = useState([])
-  const [drawnItems, setDrawnItems] = useState([])
   const [selectedMission, setSelectedMission] = useState(null)
   const [map, setMap] = useState(null)
 
-  // Effect untuk mengambil data mission ketika selectedMissionId berubah
   useEffect(() => {
     const fetchSelectedMission = async () => {
       if (selectedMissionId) {
@@ -36,7 +33,6 @@ const MapComponents = ({ selectedMissionId }) => {
           const response = await axios.get(`http://localhost:3000/api/missions/${selectedMissionId}`);
           setSelectedMission(response.data);
           
-          // Center map pada koordinat pertama dari mission yang dipilih
           if (response.data.coord && response.data.coord.length > 0 && map) {
             const firstCoord = response.data.coord[0];
             map.setView([firstCoord.lat, firstCoord.lng], 16);
@@ -49,6 +45,8 @@ const MapComponents = ({ selectedMissionId }) => {
             text: 'Failed to load mission data'
           });
         }
+      } else {
+        setSelectedMission(null); // Clear selected mission when no ID is provided
       }
     };
 
@@ -92,9 +90,9 @@ const MapComponents = ({ selectedMissionId }) => {
             showConfirmButton: false,
             timer: 2000
           });
-
-          setMissions(prev => [...prev, response.data]);
-          setDrawnItems(prev => [...prev, { type: 'polyline', coordinates, id: response.data.mission_id }]);
+          
+          // Set the newly created mission as the selected mission
+          setSelectedMission(response.data);
         } catch (error) {
           console.error('Error saving mission:', error);
           Swal.fire({
@@ -103,19 +101,17 @@ const MapComponents = ({ selectedMissionId }) => {
             text: 'Failed to save mission'
           });
         }
+      } else {
+        // Remove the drawn layer if mission name wasn't provided
+        layer.remove();
       }
     }
   };
 
   const handleDeleted = (e) => {
     const layers = e.layers;
-    layers.eachLayer((layer) => {
-      setDrawnItems(prev => 
-        prev.filter(item => !layer.getLatLngs().every((latLng, i) => 
-          latLng.lat === item.coordinates[i]?.lat && 
-          latLng.lng === item.coordinates[i]?.lng
-        ))
-      );
+    layers.eachLayer(() => {
+      setSelectedMission(null);
     });
   };
 
@@ -137,12 +133,10 @@ const MapComponents = ({ selectedMissionId }) => {
           onCreated={handleCreated}
           onDeleted={handleDeleted}
           draw={{
-            marker: {
-              icon: DefaultIcon
-            },
+            marker: false,
             circle: false,
             rectangle: false,
-            polygon: true,
+            polygon: false,
             polyline: true,
             circlemarker: false
           }}
