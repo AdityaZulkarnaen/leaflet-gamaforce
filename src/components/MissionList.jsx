@@ -105,7 +105,7 @@ function MissionList({ missionListClose, onMissionLoad }) {
 
   const handleLoadMission = (missionId) => {
     onMissionLoad(missionId);
-    missionListClose(); // Close the mission list after loading
+    missionListClose(); 
   };
 
   return (

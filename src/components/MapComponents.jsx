@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import { useMapEvents } from 'react-leaflet'
 import axios from 'axios'
@@ -46,7 +46,7 @@ const MapComponents = ({ selectedMissionId }) => {
           });
         }
       } else {
-        setSelectedMission(null); // Clear selected mission when no ID is provided
+        setSelectedMission(null); 
       }
     };
 
@@ -91,7 +91,6 @@ const MapComponents = ({ selectedMissionId }) => {
             timer: 2000
           });
           
-          // Set the newly created mission as the selected mission
           setSelectedMission(response.data);
         } catch (error) {
           console.error('Error saving mission:', error);
@@ -102,7 +101,6 @@ const MapComponents = ({ selectedMissionId }) => {
           });
         }
       } else {
-        // Remove the drawn layer if mission name wasn't provided
         layer.remove();
       }
     }
